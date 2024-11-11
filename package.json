@@ -1,18 +1,20 @@
 {
     "name": "notificaciones-sistema",
     "version": "1.0.0",
-    "description": "Sistema de notificaciones en tiempo real",
     "main": "server.js",
     "scripts": {
-        "start": "node server.js"
+        "start": "node server.js",
+        "dev": "concurrently \"npm run server\" \"npm run client\"",
+        "server": "nodemon server.js",
+        "client": "cd client && npm start"
     },
     "dependencies": {
-        "express": "^4.21.1",
-        "mongoose": "^6.13.3",
-        "punycode": "^2.3.1",
-        "socket.io": "^4.8.1"
+        "express": "^4.17.1",
+        "mongoose": "^5.10.9",
+        "socket.io": "^4.0.1"
     },
-    "keywords": [],
-    "author": "",
-    "license": "ISC"
+    "devDependencies": {
+        "concurrently": "^9.1.0",
+        "nodemon": "^2.0.6"
+    }
 }

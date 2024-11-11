@@ -1,80 +1,71 @@
 const express = require('express');
 const http = require('http');
-const { Server } = require('socket.io');
-const connectDB = require('./db');
-const Notification = require('./models/Notification');
+const socketIo = require('socket.io');
+const mongoose = require('mongoose');
+const Message = require('./models/Message'); // Modelo de mensaje
 
-// Conectar a MongoDB usando la función connectDB de db.js
-connectDB();
-
-// Configuración del servidor
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = socketIo(server);
 
-app.use(express.static('public'));
+const PORT = 4000;
+const DB_URI = 'mongodb://127.0.0.1:27017/notis';
 
-// Almacenar usuarios conectados y sus sockets
-let connectedUsers = {};
+// Conectar a la base de datos
+mongoose.connect(DB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+    .then(() => console.log('Conexión a MongoDB exitosa'))
+    .catch(err => console.error('Error al conectar a MongoDB:', err));
 
-// Manejar la conexión de los clientes
+// Middleware para parsear JSON
+app.use(express.json());
+
+// Evento de conexión con Socket.IO
+let users = {}; // Almacena los usuarios conectados
+
 io.on('connection', (socket) => {
-  console.log('Usuario conectado:', socket.id);
+    console.log('Un usuario se ha conectado:', socket.id);
 
-  // Evento cuando un usuario selecciona un nombre de usuario
-  socket.on('join', (userId) => {
-    connectedUsers[userId] = socket.id;
-    console.log(`Usuario ${userId} conectado con el socket ID ${socket.id}`);
-    socket.broadcast.emit('userStatus', `${userId} se ha conectado`);
-  });
-
-  // Manejar la recepción de un mensaje privado
-  socket.on('sendMessage', async ({ sender, recipient, message }) => {
-    const timestamp = new Date();
-
-    // Crear y guardar el mensaje en la base de datos
-    const notification = new Notification({
-      userId: recipient,
-      sender: sender,
-      message: message,
-      timestamp: timestamp
+    // Guardar al usuario cuando se conecta
+    socket.on('user_connected', (user) => {
+        users[socket.id] = user;
+        io.emit('user_update', users); // Notificar a todos los usuarios
+        console.log(`${user} conectado`);
     });
-    await notification.save();
 
-    // Emitir el mensaje al destinatario si está conectado
-    const recipientSocket = connectedUsers[recipient];
-    if (recipientSocket) {
-      io.to(recipientSocket).emit('receiveMessage', { sender, message, timestamp });
-    }
-    
-    // Enviar el mensaje de vuelta al remitente para mostrar en su propia ventana de chat
-    socket.emit('receiveMessage', { sender, message, timestamp });
-  });
+    // Enviar notificación a usuarios específicos o a todos
+    socket.on('send_notification', async (notification) => {
+        const message = new Message({
+            message: notification.message,
+            date: new Date(),
+            user: notification.user
+        });
+        await message.save();
 
-  // Manejar la desconexión
-  socket.on('disconnect', () => {
-    const userId = Object.keys(connectedUsers).find(key => connectedUsers[key] === socket.id);
-    if (userId) {
-      delete connectedUsers[userId];
-      console.log(`Usuario ${userId} desconectado`);
-      socket.broadcast.emit('userStatus', `${userId} se ha desconectado`);
-    }
-  });
+        if (notification.target === 'all') {
+            io.emit('notification', message);
+        } else {
+            io.to(notification.target).emit('notification', message);
+        }
+    });
+
+    // Desconectar un usuario
+    socket.on('disconnect', () => {
+        const user = users[socket.id];
+        if (user) {
+            delete users[socket.id];
+            io.emit('user_update', users); // Notificar a todos los usuarios
+            console.log(`${user} desconectado`);
+        }
+    });
 });
 
-// Rutas adicionales para cargar mensajes anteriores entre usuarios
-app.get('/chatHistory/:userId/:recipientId', async (req, res) => {
-  const { userId, recipientId } = req.params;
-  const messages = await Notification.find({
-    $or: [
-      { userId: recipientId, sender: userId },
-      { userId: userId, sender: recipientId }
-    ]
-  }).sort({ timestamp: 1 });
-  res.json(messages);
+// Servir el frontend en React
+app.use(express.static('client/build'));
+
+app.get('/', (req, res) => {
+  res.send('¡Servidor Express funcionando!');
 });
 
-// Iniciar el servidor en el puerto 3000
-server.listen(3000, () => {
-  console.log('Servidor corriendo en http://localhost:3000');
+server.listen(PORT, () => {
+    console.log(`Servidor escuchando en el puerto ${PORT}`);
 });
