@@ -1,0 +1,17 @@
+{
+    "name": "notificaciones-sistema",
+    "version": "1.0.0",
+    "description": "Sistema de notificaciones en tiempo real",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js"
+    },
+    "dependencies": {
+        "express": "^4.21.1",
+        "mongoose": "^6.13.3",
+        "socket.io": "^4.8.1"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC"
+}

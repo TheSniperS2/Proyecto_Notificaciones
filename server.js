@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
-const Notification = require('./models/Notificacion');
+const Notification = require('./models/Notification');
 
 // Conectar a MongoDB
 mongoose.connect('mongodb://localhost:27017/notificaciones', {
