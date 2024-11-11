@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 import Notification from './Notification';
+import './App.css'; // Importa el archivo CSS para estilos
 
 const socket = io('http://localhost:4000');
 
@@ -50,24 +51,25 @@ function App() {
     };
 
     return (
-        <div>
+        <div className="App">
             {!user ? (
-                <div>
-                    <button onClick={() => handleUserSelect('Usuario 1')}>Usuario 1</button>
-                    <button onClick={() => handleUserSelect('Usuario 2')}>Usuario 2</button>
-                    <button onClick={() => handleUserSelect('Usuario 3')}>Usuario 3</button>
+                <div className="user-selection">
+                    <button className="user-button" onClick={() => handleUserSelect('Usuario 1')}>Usuario 1</button>
+                    <button className="user-button" onClick={() => handleUserSelect('Usuario 2')}>Usuario 2</button>
+                    <button className="user-button" onClick={() => handleUserSelect('Usuario 3')}>Usuario 3</button>
                 </div>
             ) : (
-                <div>
+                <div className="dashboard">
                     <h2>Bienvenido, {user}</h2>
-                    <button onClick={handleDisconnect}>Desconectar</button>
-                    <div>
+                    <button className="disconnect-button" onClick={handleDisconnect}>Desconectar</button>
+                    <div className="notification-form">
                         <textarea
+                            className="message-input"
                             value={message}
                             onChange={(e) => setMessage(e.target.value)}
                             placeholder="Escribe una notificación"
                         />
-                        <button onClick={handleSendNotification}>Enviar Notificación</button>
+                        <button className="send-button" onClick={handleSendNotification}>Enviar Notificación</button>
                     </div>
                     <Notification notifications={notifications} />
                 </div>
