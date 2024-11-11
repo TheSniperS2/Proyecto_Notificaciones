@@ -49,14 +49,11 @@ io.on('connection', (socket) => {
     });
 
     // Desconectar un usuario
-    socket.on('disconnect', () => {
-        const user = users[socket.id];
-        if (user) {
-            delete users[socket.id];
-            io.emit('user_update', users); // Notificar a todos los usuarios
-            console.log(`${user} desconectado`);
-        }
-    });
+    socket.on('user_disconnect', () => {
+        console.log(`${socket.id} se ha desconectado`);
+        // Aquí podrías realizar otras acciones como eliminar al usuario de la lista de usuarios activos
+        io.emit('user_update', users);  // Emitir la lista de usuarios actualizada
+    });   
 });
 
 // Servir el frontend en React

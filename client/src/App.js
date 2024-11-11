@@ -35,7 +35,7 @@ function App() {
     };
 
     const handleDisconnect = () => {
-        socket.emit('disconnect');
+        socket.emit('user_disconnect'); // Cambié 'disconnect' a 'user_disconnect'
         setUser(null);
     };
 
