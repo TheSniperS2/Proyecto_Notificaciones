@@ -1,22 +1,37 @@
-const mongoose = require('mongoose');
+// server.js
+const express = require('express');
+const http = require('http');
+const socketIo = require('socket.io');
 
-// Establecer `strictQuery` a `false` para el comportamiento no estricto
-mongoose.set('strictQuery', false);
+const app = express();
+const server = http.createServer(app);
+const io = socketIo(server);
 
-const connectDB = async () => {
-  try {
-    await mongoose.connect('mongodb://127.0.0.1:27017/notis', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 20000, // Tiempo de espera extendido
-      maxPoolSize: 10,                 // Limitar el tamaño máximo de conexiones en el pool
-      minPoolSize: 5                   // Tamaño mínimo de conexiones en el pool
-    });
-    console.log('MongoDB conectado');
-  } catch (error) {
-    console.error('Error al conectar a MongoDB:', error);
-    process.exit(1); // Salir del proceso si no se puede conectar a MongoDB
-  }
-};
+let connectedUsers = [];
 
-module.exports = connectDB;
+io.on('connection', (socket) => {
+  console.log('Usuario conectado');
+
+  // Evento para cuando un usuario se conecta
+  socket.on('user_connected', (username) => {
+    connectedUsers.push(username);
+    io.emit('user_update', connectedUsers); // Enviar lista de usuarios conectados a todos
+    console.log(`${username} se ha conectado`);
+  });
+
+  // Evento para cuando un usuario se desconecta
+  socket.on('disconnect', () => {
+    connectedUsers = connectedUsers.filter((user) => user !== socket.username);
+    io.emit('user_update', connectedUsers); // Actualizar la lista
+    console.log('Usuario desconectado');
+  });
+
+  // Evento para manejar los mensajes del chat
+  socket.on('send_chat_message', (message) => {
+    io.emit('chat_message', message); // Emitir mensaje a todos
+  });
+});
+
+server.listen(4000, () => {
+  console.log('Servidor escuchando en el puerto 4000');
+});
