@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Chat de Usuario</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">
+      <h1 id="username"></h1>
+      <select id="recipientSelect">
+        <option value="Usuario 1">Usuario 1</option>
+        <option value="Usuario 2">Usuario 2</option>
+        <option value="Usuario 3">Usuario 3</option>
+      </select>
+      <button onclick="desconectar()">Desconectar</button>
+    </div>
+
+    <div id="chatHistory" class="chat-history"></div>
+
+    <div class="chat-input">
+      <input type="text" id="messageInput" placeholder="Escribe un mensaje..." autocomplete="off">
+      <button onclick="enviarMensaje()">Enviar</button>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const userId = new URLSearchParams(window.location.search).get('user');
+    document.getElementById('username').textContent = `Usuario: ${userId}`;
+
+    // Conectar usuario
+    socket.emit('join', userId);
+
+    // Cargar historial de mensajes al seleccionar un destinatario
+    document.getElementById('recipientSelect').addEventListener('change', cargarHistorial);
+
+    socket.on('receiveMessage', ({ sender, message, timestamp }) => {
+      mostrarMensaje({ sender, message, timestamp });
+    });
+
+    function enviarMensaje() {
+      const recipient = document.getElementById('recipientSelect').value;
+      const message = document.getElementById('messageInput').value;
+      socket.emit('sendMessage', { sender: userId, recipient, message });
+      document.getElementById('messageInput').value = '';
+    }
+
+    function mostrarMensaje({ sender, message, timestamp }) {
+      const div = document.createElement('div');
+      div.classList.add(sender === userId ? 'sent-message' : 'received-message');
+      div.textContent = `[${new Date(timestamp).toLocaleTimeString()}] ${sender}: ${message}`;
+      document.getElementById('chatHistory').appendChild(div);
+      document.getElementById('chatHistory').scrollTop = document.getElementById('chatHistory').scrollHeight;
+    }
+
+    function cargarHistorial() {
+      const recipient = document.getElementById('recipientSelect').value;
+      fetch(`/chatHistory/${userId}/${recipient}`)
+        .then(response => response.json())
+        .then(messages => {
+          document.getElementById('chatHistory').innerHTML = '';
+          messages.forEach(mensaje => mostrarMensaje(mensaje));
+        });
+    }
+
+    function desconectar() {
+      socket.disconnect();
+      window.close();
+    }
+  </script>
+</body>
+</html>

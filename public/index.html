@@ -7,37 +7,13 @@
 </head>
 <body>
   <h1>Selecciona un Usuario</h1>
-  <button onclick="seleccionarUsuario('Usuario 1')">Usuario 1</button>
-  <button onclick="seleccionarUsuario('Usuario 2')">Usuario 2</button>
-  <button onclick="seleccionarUsuario('Usuario 3')">Usuario 3</button>
-
-  <h2>Enviar Notificación</h2>
-  <textarea id="notificationMessage" placeholder="Escribe el mensaje..."></textarea><br>
-  <label><input type="checkbox" value="Usuario 1"> Usuario 1</label>
-  <label><input type="checkbox" value="Usuario 2"> Usuario 2</label>
-  <label><input type="checkbox" value="Usuario 3"> Usuario 3</label>
-  <label><input type="checkbox" id="allUsers"> Todos</label><br>
-  <button onclick="enviarNotificacion()">Enviar</button>
+  <button onclick="abrirChat('Usuario 1')">Usuario 1</button>
+  <button onclick="abrirChat('Usuario 2')">Usuario 2</button>
+  <button onclick="abrirChat('Usuario 3')">Usuario 3</button>
 
   <script>
-    function seleccionarUsuario(usuario) {
-      window.open(`usuario.html?user=${usuario}`, '_blank');
-    }
-
-    function enviarNotificacion() {
-      const message = document.getElementById('notificationMessage').value;
-      const recipients = Array.from(document.querySelectorAll('input[type=checkbox]:checked'))
-        .map(checkbox => checkbox.value);
-
-      if (recipients.includes('Todos')) {
-        recipients.splice(0, recipients.length, 'Usuario 1', 'Usuario 2', 'Usuario 3');
-      }
-
-      fetch('/sendNotification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, recipients })
-      });
+    function abrirChat(usuario) {
+      window.open(`chat.html?user=${usuario}`, '_blank');
     }
   </script>
 </body>
