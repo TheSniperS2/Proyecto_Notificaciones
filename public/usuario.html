@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Notificaciones del Usuario</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <h1 id="userId"></h1>
+  <button onclick="desconectar()">Desconectarse</button>
+  
+  <h2>Notificaciones</h2>
+  <div id="notifications"></div>
+  <button onclick="verNotificacionesPasadas()">Ver notificaciones pasadas</button>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const userId = new URLSearchParams(window.location.search).get('user');
+    document.getElementById('userId').textContent = `Usuario: ${userId}`;
+
+    socket.emit('join', userId);
+
+    socket.on('receiveNotification', (notification) => {
+      mostrarNotificacion(notification);
+    });
+
+    socket.on('userConnected', (message) => {
+      mostrarNotificacion({ message });
+    });
+
+    socket.on('userDisconnected', (message) => {
+      mostrarNotificacion({ message });
+    });
+
+    function desconectar() {
+      socket.disconnect();
+      window.close();
+    }
+
+    function mostrarNotificacion(notification) {
+      const div = document.createElement('div');
+      div.textContent = `${notification.timestamp || ''} - ${notification.message}`;
+      document.getElementById('notifications').prepend(div);
+    }
+
+    function verNotificacionesPasadas() {
+      fetch(`/notifications/${userId}`)
+        .then(response => response.json())
+        .then(data => {
+          data.forEach(notification => mostrarNotificacion(notification));
+        });
+    }
+  </script>
+</body>
+</html>
