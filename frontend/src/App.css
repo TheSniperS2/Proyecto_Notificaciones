@@ -1,0 +1,271 @@
+/* Estilos generales */
+body {
+  font-family: 'Arial', sans-serif;
+  background-color: #f4f4f4;
+  margin: 0;
+  padding: 0;
+}
+
+/* Contenedor principal */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Título principal */
+h2 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+/* Estilo para la cuadrícula de usuarios */
+.user-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+/* Estilo para cada caja de usuario */
+.user-box {
+  background-color: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  transition: transform 0.3s;
+}
+
+.user-box:hover {
+  transform: scale(1.05);
+}
+
+/* Información del usuario */
+.user-info {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  background-color: #007bff;
+  color: white;
+}
+
+/* Avatar del usuario */
+.user-avatar {
+  width: 50px;
+  height: 50px;
+  background-color: #e0e0e0;
+  border-radius: 50%;
+  margin-right: 15px;
+  flex-shrink: 0;
+}
+
+/* Indicador de estado */
+.status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+/* Botón de conexión */
+.connect-button {
+  background-color: #ff4757;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.connect-button:hover {
+  background-color: #e84118;
+}
+
+/* Estilo de la caja de notificaciones */
+.notifications-box {
+  margin-top: 15px;
+  padding: 10px;
+  border-top: 2px solid #007bff;
+}
+
+/* Encabezado de notificaciones */
+.notifications-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Botón para ver notificaciones */
+.clear-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  position: relative;
+}
+
+/* Badge para notificaciones no vistas */
+.badge {
+  background-color: #ff4757;
+  color: white;
+  border-radius: 12px;
+  padding: 2px 6px;
+  position: absolute;
+  top: -5px;
+  right: -10px;
+  font-size: 12px;
+}
+
+/* Lista de notificaciones */
+.notifications-list {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 10px;
+}
+
+/* Elemento de notificación */
+.notification-item {
+  background-color: #f1f1f1;
+  border-radius: 5px;
+  padding: 10px;
+  margin: 5px 0;
+  transition: background-color 0.3s;
+}
+
+.notification-item:hover {
+  background-color: #e0e0e0;
+}
+
+/* Estilos para pantallas pequeñas */
+@media (max-width: 768px) {
+  .user-grid {
+      grid-template-columns: 1fr; /* Una columna en dispositivos pequeños */
+  }
+
+  .user-box {
+      margin: 10px 0; /* Espaciado entre usuarios */
+  }
+}
+
+/* Estilos para pantallas medianas */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .user-grid {
+      grid-template-columns: repeat(2, 1fr); /* Dos columnas en dispositivos medianos */
+  }
+}
+
+/* Estilo para el botón de ver notificaciones pasadas */
+.view-past-notifications {
+  margin-top: 15px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.view-past-notifications:hover {
+  background-color: #0056b3;
+}
+
+/* Estilo para el contenedor de notificaciones pasadas */
+.past-notifications-container {
+  background-color: #ffffff;
+  border-radius: 10px;
+  padding: 15px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
+}
+
+/* Estilo para el encabezado de notificaciones pasadas */
+.past-notifications-header {
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+/* Estilo para cada notificación pasada */
+.past-notification-item {
+  background-color: #f9f9f9;
+  border-radius: 5px;
+  padding: 8px;
+  margin: 5px 0;
+  transition: background-color 0.3s;
+}
+
+.past-notification-item:hover {
+  background-color: #e9e9e9;
+}
+
+/* Estilo para el botón de cerrar notificaciones */
+.close-notifications-button {
+  background-color: #ff4757;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.close-notifications-button:hover {
+  background-color: #e84118;
+}
+
+/* Estilo para el pie de página */
+.footer {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 14px;
+  color: #777;
+}
+
+/* Estilo para enlaces en el pie de página */
+.footer a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.footer a:hover {
+  text-decoration: underline;
+}
+
+/* Estilo para mensajes de error */
+.error-message {
+  color: #ff4757;
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+/* Estilo para mensajes de éxito */
+.success-message {
+  color: #2ed573;
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+/* Estilo para el contenedor de carga */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+/* Estilo para el spinner de carga */
+.loading-spinner {
+  border: 8px solid #f3f3f3; /* Color de fondo */
+  border-top: 8px solid #3498db; /* Color de la parte superior */
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 2s linear infinite;
+}
+
+/* Animación de giro */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
