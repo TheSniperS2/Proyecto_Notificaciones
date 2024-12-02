@@ -137,6 +137,10 @@ h2 {
   background-color: #e0e0e0;
 }
 
+.notification-item.unread {
+  background-color: #ffeb3b; /* Un color más destacado para no leídas */
+}
+
 /* Estilos para pantallas pequeñas */
 @media (max-width: 768px) {
   .user-grid {

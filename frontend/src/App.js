@@ -11,16 +11,16 @@ function UserComponent({ userId }) {
   const [unreadNotifications, setUnreadNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [viewedNotifications, setViewedNotifications] = useState([]);
-  const [showNotifications, setShowNotifications] = useState(false); // Estado para mostrar/ocultar notificaciones
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // Función para conectar/desconectar usuario
   const toggleConnection = () => {
     if (isConnected) {
-      socket.emit('disconnectUser ', userId);
+      socket.emit('disconnectUser', userId);
       setIsConnected(false);
       setUnreadCount(unreadNotifications.length); // Mantener conteo si se desconecta
     } else {
-      socket.emit('connectUser ', userId);
+      socket.emit('connectUser', userId);
       setIsConnected(true);
       setUnreadCount(0); // Resetear contador al conectarse
     }
@@ -30,16 +30,18 @@ function UserComponent({ userId }) {
   useEffect(() => {
     const handleNotification = (notification) => {
       if (isConnected) {
-        // Mostrar notificación si está conectado
-        setNotifications((prev) => [...prev, notification]);
+        // Mostrar notificaciones si está conectado, máximo 10 notificaciones
+        setNotifications((prev) => {
+          const updated = [...prev, notification];
+          return updated.slice(-10); // Mantener solo las últimas 10 notificaciones
+        });
       } else {
-        // Almacenar en no vistas si está desconectado
+        // Almacenar en notificaciones no vistas si está desconectado, máximo 10 notificaciones
         setUnreadNotifications((prev) => {
           const updated = [...prev, notification];
-          // Limitar a 20 notificaciones no vistas
-          return updated.length > 20 ? updated.slice(-20) : updated;
+          return updated.slice(-10); // Mantener solo las últimas 10 no vistas
         });
-        setUnreadCount((prev) => prev + 1);
+        setUnreadCount((prev) => Math.min(prev + 1, 10)); // No permitir que el contador pase de 10
       }
     };
 
@@ -79,7 +81,12 @@ function UserComponent({ userId }) {
       <div className="notifications-box">
         <div className="notifications-header">
           <span>Notificaciones</span>
-          <button className="clear-button" onClick={handleBellClick}>
+          <button 
+            className="clear-button" 
+            onClick={handleBellClick} 
+            disabled={!isConnected} // Deshabilitar el botón si el usuario no está conectado
+            style={{ opacity: isConnected ? 1 : 0.5 }} // Cambiar la opacidad para indicar que está bloqueado
+          >
             <i className="bell-icon">🔔</i>
             {unreadCount > 0 && <span className="badge">{unreadCount}</span>}
           </button>
@@ -92,8 +99,8 @@ function UserComponent({ userId }) {
                 {notif.message}
               </div>
             ))}
-            {/* Mostrar las últimas 10 notificaciones */}
-            {notifications.slice(-10).map((notif, index) => (
+            {/* Mostrar las últimas 10 notificaciones si está conectado */}
+            {isConnected && notifications.slice(-10).map((notif, index) => (
               <div key={index} className="notification-item">
                 {notif.message}
               </div>
