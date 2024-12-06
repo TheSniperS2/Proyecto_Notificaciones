@@ -1,47 +1,56 @@
 import React, { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
-import './App.css'; // Asegúrate de que los estilos estén en este archivo
+import './App.css';
 
-const socket = io('http://localhost:4000'); // Cambia el puerto si es necesario
-const USERS = ['Usuario 1', 'Usuario 2', 'Usuario 3', 'Usuario 4', 'Usuario 5', 'Usuario 6']; // Seis usuarios
+const socket = io('http://localhost:4000');
+const USERS = ['Usuario 1', 'Usuario 2', 'Usuario 3', 'Usuario 4'];
 
 function UserComponent({ userId }) {
   const [isConnected, setIsConnected] = useState(false);
-  const [notifications, setNotifications] = useState([]);
   const [unreadNotifications, setUnreadNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [viewedNotifications, setViewedNotifications] = useState([]);
-  const [showNotifications, setShowNotifications] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false); // Estado para mostrar/ocultar las notificaciones
 
-  // Función para conectar/desconectar usuario
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        console.log(`Cargando notificaciones para ${userId}`); // Log para depuración
+        const response = await fetch(`http://localhost:4000/notifications/${userId}`);
+        const data = await response.json();
+  
+        const unread = data.filter(notification => notification.status === 'No Leido');
+        setUnreadNotifications(unread);
+        setUnreadCount(unread.length);
+        setViewedNotifications(data.filter(notification => notification.status === 'Leido'));
+      } catch (error) {
+        console.error(`Error al cargar notificaciones para ${userId}:`, error);
+      }
+    };
+    fetchNotifications();
+  }, [userId]);
+  
+  
+  
+
   const toggleConnection = () => {
     if (isConnected) {
       socket.emit('disconnectUser', userId);
       setIsConnected(false);
-      setUnreadCount(unreadNotifications.length); // Mantener conteo si se desconecta
+      setShowNotifications(false); // Cierra las notificaciones al desconectar
     } else {
       socket.emit('connectUser', userId);
       setIsConnected(true);
-      setUnreadCount(0); // Resetear contador al conectarse
     }
   };
 
-  // Escuchar notificaciones en tiempo real solo si está conectado
   useEffect(() => {
     const handleNotification = (notification) => {
       if (isConnected) {
-        // Mostrar notificaciones si está conectado, máximo 10 notificaciones
-        setNotifications((prev) => {
-          const updated = [...prev, notification];
-          return updated.slice(-10); // Mantener solo las últimas 10 notificaciones
-        });
+        setViewedNotifications((prev) => [...prev, notification]);
       } else {
-        // Almacenar en notificaciones no vistas si está desconectado, máximo 10 notificaciones
-        setUnreadNotifications((prev) => {
-          const updated = [...prev, notification];
-          return updated.slice(-10); // Mantener solo las últimas 10 no vistas
-        });
-        setUnreadCount((prev) => Math.min(prev + 1, 10)); // No permitir que el contador pase de 10
+        setUnreadNotifications((prev) => [...prev, notification]);
+        setUnreadCount((prev) => prev + 1);
       }
     };
 
@@ -54,18 +63,46 @@ function UserComponent({ userId }) {
     };
   }, [isConnected, userId]);
 
-  // Mostrar mensajes no vistos al pulsar la campana
-  const handleBellClick = () => {
+  const handleBellClick = async () => {
     if (showNotifications) {
-      // Si las notificaciones están visibles, ocultarlas
-      setShowNotifications(false);
-      setViewedNotifications([]); // Limpiar las notificaciones vistas al cerrar
-    } else {
-      // Si están ocultas, mostrarlas
-      setViewedNotifications((prev) => [...prev, ...unreadNotifications]);
-      setUnreadNotifications([]); // Limpiar las no vistas
-      setUnreadCount(0);
-      setShowNotifications(true);
+      setShowNotifications(false); // Oculta notificaciones si ya están visibles
+      return;
+    }
+
+    const updatedNotifications = unreadNotifications.map(notif => ({
+      ...notif,
+      status: 'Leido'
+    }));
+
+    setViewedNotifications((prev) => [...prev, ...updatedNotifications]);
+    setUnreadNotifications([]);
+    setUnreadCount(0);
+    setShowNotifications(true); // Muestra las notificaciones
+
+    try {
+      await fetch(`http://localhost:4000/notifications/markAsRead`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, notifications: updatedNotifications })
+      });
+    } catch (error) {
+      console.error('Error al marcar como visto:', error);
+    }
+  };
+
+  const clearNotifications = async () => {
+    if (viewedNotifications.length === 0) return;
+
+    try {
+      await fetch(`http://localhost:4000/notifications/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+
+      setViewedNotifications([]);
+    } catch (error) {
+      console.error('Error al eliminar notificaciones:', error);
     }
   };
 
@@ -81,26 +118,30 @@ function UserComponent({ userId }) {
       <div className="notifications-box">
         <div className="notifications-header">
           <span>Notificaciones</span>
-          <button 
-            className="clear-button" 
-            onClick={handleBellClick} 
-            disabled={!isConnected} // Deshabilitar el botón si el usuario no está conectado
-            style={{ opacity: isConnected ? 1 : 0.5 }} // Cambiar la opacidad para indicar que está bloqueado
-          >
-            <i className="bell-icon">🔔</i>
-            {unreadCount > 0 && <span className="badge">{unreadCount}</span>}
-          </button>
+          <button
+  className="clear-button"
+  onClick={handleBellClick}
+  disabled={!isConnected} // Desactiva si no está conectado
+>
+  <i className="bell-icon">🔔</i>
+  {unreadCount > 0 && (
+    <span className="badge">
+      {unreadCount > 10 ? '10+' : unreadCount} {/* Limita a 10 */}
+    </span>
+  )}
+</button>
+
+<button
+  className="clear-button"
+  onClick={clearNotifications}
+  disabled={!isConnected} // Desactiva si no está conectado
+>
+  Limpiar
+</button>
         </div>
-        {showNotifications && (
+        {showNotifications && ( // Condicional para mostrar u ocultar la lista
           <div className="notifications-list">
-            {/* Historial de notificaciones vistas */}
             {viewedNotifications.map((notif, index) => (
-              <div key={index} className="notification-item">
-                {notif.message}
-              </div>
-            ))}
-            {/* Mostrar las últimas 10 notificaciones si está conectado */}
-            {isConnected && notifications.slice(-10).map((notif, index) => (
               <div key={index} className="notification-item">
                 {notif.message}
               </div>

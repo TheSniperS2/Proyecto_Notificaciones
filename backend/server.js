@@ -13,99 +13,154 @@ const io = new Server(server, {
   }
 });
 
-app.use(cors());
-app.use(express.json());
+app.use(cors()); // Permitir CORS para todas las rutas y todos los orígenes
+app.use(express.json()); // Esto permite que el backend reciba JSON
 
-// Conexión a la base de datos de MongoDB
+
+const PORT = 4000;
+const users = {};
+
+// Conexión a MongoDB
 mongoose.connect('mongodb://127.0.0.1:27017/notificaciones', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-});
+})
+  .then(() => console.log('Conectado a MongoDB'))
+  .catch((err) => console.error('Error conectando a MongoDB:', err));
 
-// Modelo de notificación
+// Esquema de Notificaciones
 const notificationSchema = new mongoose.Schema({
-  date: { type: Date, default: Date.now },
+  userId: String,
   message: String,
-  user: String,
-  isGlobal: { type: Boolean, default: false },
+  status: { type: String, enum: ['Leido', 'No Leido'], default: 'No Leido' }, 
+  timestamp: { type: Date, default: Date.now }
 });
-
 const Notification = mongoose.model('Notification', notificationSchema);
 
-// Almacena los usuarios conectados y sus IDs de socket
-const users = new Map(); // Usamos un Map para manejar mejor la conexión y desconexión
+// Lista de usuarios conectados con su estado
+const userStatus = {};
 
-// Función para enviar notificaciones aleatorias
-function sendRandomNotification() {
+// Función para enviar notificación aleatoria
+async function sendRandomNotification() {
+  const allUsers = Object.keys(userStatus);
+
+  if (allUsers.length === 0) return;
+
   const isGlobal = Math.random() > 0.5;
   const message = isGlobal
     ? 'Mensaje global para todos los usuarios.'
-    : `Notificación privada para un usuario.` ;
+    : `Notificación privada para un usuario.`;
 
-  console.log(`Enviando notificación: ${message}`);
-
-  const userId = isGlobal ? 'Todos' : Array.from(users.keys())[Math.floor(Math.random() * users.size)]; // Selecciona un usuario al azar
-
-  // Guardar la notificación en la base de datos
-  const newNotification = new Notification({
-    message,
-    user: isGlobal ? 'Todos' : userId, // Asigna el userId si no es global
-    isGlobal,
-  });
-
-  newNotification.save()
-    .then(() => console.log('Notificación guardada en la base de datos'))
-    .catch((err) => console.error('Error al guardar la notificación:', err));
-
-  // Enviar la notificación a todos los usuarios conectados si es global
   if (isGlobal) {
+    for (const userId of allUsers) {
+      const status = userStatus[userId] ? 'Leido' : 'No Leido';
+      const notification = await new Notification({
+        userId,
+        message,
+        status,
+      }).save();
+
+      console.log(`Notificación global guardada para ${userId}:`, notification);
+    }
+
     io.emit('receiveNotification', { message });
-  } else if (userId && users.has(userId)) {
-    // Enviar notificación privada al usuario específico
-    io.to(users.get(userId)).emit('receiveNotification', { message });
+  } else {
+    const randomIndex = Math.floor(Math.random() * allUsers.length);
+    const randomUser = allUsers[randomIndex];
+    const status = userStatus[randomUser] ? 'Leido' : 'No Leido';
+
+    const notification = await new Notification({
+      userId: randomUser,
+      message,
+      status,
+    }).save();
+
+    console.log(`Notificación privada guardada para ${randomUser}:`, notification);
+    io.to(users[randomUser]).emit(`receiveNotification_${randomUser}`, { message });
   }
 }
 
-// Manejo de conexiones de Socket.IO
-io.on('connection', (socket) => {
-  console.log('Usuario conectado:', socket.id);
 
-  // Enviar notificaciones guardadas a un nuevo usuario que se conecta
-  Notification.find().then((notifications) => {
-    notifications.forEach((notification) => {
-      if (notification.isGlobal) {
-        io.to(socket.id).emit('receiveNotification', { message: notification.message });
-      }
+
+app.get('/notifications/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const notifications = await Notification.find({ userId }).sort({ timestamp: -1 });
+    console.log(`Notificaciones para ${userId}:`, notifications); // Log para depuración
+    res.json(notifications);
+  } catch (error) {
+    console.error("Error al obtener notificaciones:", error);
+    res.status(500).json({ error: "Error al obtener notificaciones" });
+  }
+});
+
+
+
+
+// backend/server.js o el archivo de tu servidor
+app.post('/notifications/markAsRead', async (req, res) => {
+  const { userId, notifications } = req.body;
+  try {
+    await Notification.updateMany(
+      { userId, _id: { $in: notifications.map(n => n._id) } },
+      { $set: { status: "Leido" } }
+    );
+    res.sendStatus(200);
+  } catch (error) {
+    console.error("Error al marcar notificaciones como vistas:", error);
+    res.status(500).json({ error: "Error al actualizar estado de notificaciones" });
+  }
+});
+
+app.post('/notifications/delete', async (req, res) => {
+  const { userId, notifications } = req.body;
+
+  if (!userId || !notifications || !Array.isArray(notifications)) {
+    return res.status(400).json({ error: 'Datos incompletos o incorrectos.' });
+  }
+
+  try {
+    // Elimina las notificaciones especificadas de la base de datos
+    await Notification.deleteMany({
+      _id: { $in: notifications.map(n => n._id) },
+      userId: userId
     });
+
+    res.json({ message: 'Notificaciones eliminadas correctamente.' });
+  } catch (error) {
+    console.error('Error al eliminar notificaciones:', error);
+    res.status(500).json({ error: 'Error al eliminar notificaciones' });
+  }
+});
+
+
+// Manejo de eventos de conexión de socket
+io.on('connection', (socket) => {
+  socket.on('connectUser', (userId) => {
+    users[userId] = socket.id;
+    userStatus[userId] = true; // Usuario conectado
+    console.log(`${userId} conectado.`);
   });
 
-  socket.on('connectUser', (userId) => {
-    // Agregar al usuario a la lista de usuarios conectados
-    users.set(userId, socket.id);
-    console.log(`Usuario ${userId} conectado con socket ID: ${socket.id}`);
+  socket.on('disconnectUser', (userId) => {
+    userStatus[userId] = false
+    // delete users[userId];
+    console.log(`${userId} desconectado.`);
   });
 
   socket.on('disconnect', () => {
-    // Buscar y eliminar al usuario que se ha desconectado
-    for (let [userId, socketId] of users.entries()) {
-      if (socketId === socket.id) {
-        users.delete(userId);
-        console.log(`Usuario ${userId} desconectado.`);
-
-        // Emitir un evento de desconexión a todos los clientes para cerrar la campana
-        io.emit('userDisconnected', { userId });
-
-        break; // Terminamos el bucle, ya que solo puede haber un usuario por socket
-      }
+    const disconnectedUser = Object.keys(users).find((key) => users[key] === socket.id);
+    if (disconnectedUser) {
+      userStatus[disconnectedUser] = false;
+      delete users[disconnectedUser];
+      console.log(`Usuario ${disconnectedUser} desconectado.`);
     }
   });
 });
 
-// Iniciar el servidor y enviar notificaciones aleatorias
-const PORT = 4000;
+setInterval(sendRandomNotification, 5000);
+
 server.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
 
-// Enviar notificaciones aleatorias cada 10 segundos
-setInterval(sendRandomNotification, 10000);
